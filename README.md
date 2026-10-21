@@ -6,7 +6,7 @@
 - 本项目与主要上游采用相同的 **PolyForm Noncommercial 1.0.0**，仅按该许可证允许的用途使用；不是 MIT/Apache，也不表示允许任意商用。见 [LICENSE](LICENSE)、[NOTICE](NOTICE)。
 - 早期 PN532 参考项目：[solar2ain/ink-nfc-fmsc-by-pn532](https://github.com/solar2ain/ink-nfc-fmsc-by-pn532)。这不是本 Android App 的完整上游，也不代表其许可证与主要上游相同。
 - [最新 APK / Release](https://github.com/wiwiwei/ink-nfc-lab/releases/latest)。当前为实验性调试签名构建，密钥不公开；自行构建会生成自己的调试密钥，可能不能覆盖官方附件。
-- 真机结果：小米 17 / Android 17 / Root，经典算法与原厂 APC 完成 476 包上传，DE 返回 `009000`，用户确认画面无异常；七算法 × 三模式图像编码自检通过。其他手机及免 Root 唤醒未验证。详见 [真机回归](docs/DEVICE_TEST-0.5.0.md)。
+- 真机结果：小米 17 / Android 17 / Root，经典算法与原厂 APC 完成 476 包上传，DE 返回 `009000`，用户确认画面无异常；七算法 × 三模式图像编码自检通过。`myron` 已按相同 ST54L 硬件加入 Root 允许列表，但尚未完成本机全流程回归。其他手机及免 Root 唤醒未验证。详见 [真机回归](docs/DEVICE_TEST-0.5.0.md)。
 - 构建和安全边界见 [PUBLIC_SOURCE.md](PUBLIC_SOURCE.md)。下文保留历史开发记录；与本节冲突时以本节及真机回归记录为准。
 
 # Ink NFC Lab 0.5.0 · Ink Studio
@@ -96,6 +96,8 @@ adb install -r build/ink-nfc-lab-debug.apk
 ```
 
 项目使用原生 Java / Android SDK，无第三方 App 运行时依赖。脚本直接调用官方 aapt2、javac、D8、zipalign 和 apksigner；构建出的 APK 使用本地开发密钥签名。
+
+仓库提供 `.github/workflows/build-apk.yml`。在 GitHub 的 Actions 页面选择 **Build APK** → **Run workflow** 即可构建；完成后在该次运行的 Artifacts 中下载 `ink-nfc-lab-debug-*.zip`。CI 每次使用临时调试密钥，连续覆盖安装前需先卸载旧包。
 
 可在电脑直接执行 root 检查，便于区分 App 的 KernelSU 授权与 NFC 接口结果：
 

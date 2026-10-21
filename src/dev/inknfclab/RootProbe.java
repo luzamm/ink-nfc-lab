@@ -118,8 +118,8 @@ public final class RootProbe {
         boolean attempted = false;
         try {
             String hal = new String(Files.readAllBytes(new File("/odm/etc/libnfc-hal-st.conf").toPath()), StandardCharsets.UTF_8);
-            if (!DeviceSupport.verifiedRootProfile(Build.DEVICE, Build.VERSION.SDK_INT) || !hal.contains("st21nfc") || !hal.contains("st54l"))
-                throw new IllegalStateException("当前辅助进程仅验证小米 17 pudding / ST54L 配置");
+            if (!DeviceSupport.allowedRootProfile(Build.DEVICE, Build.VERSION.SDK_INT) || !hal.contains("st21nfc") || !hal.contains("st54l"))
+                throw new IllegalStateException("当前设备不在 Root 允许列表，或不是匹配的 ST54L HAL 配置");
             event("ROOT", "root 辅助进程已启动，设备 " + Build.MODEL);
             if (mode.equals("compat")) {
                 installMifareCompatibility();

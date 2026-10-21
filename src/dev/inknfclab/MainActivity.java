@@ -193,7 +193,7 @@ public final class MainActivity extends Activity implements NfcAdapter.ReaderCal
                 return;
             }
             new AlertDialog.Builder(this).setTitle("连接方式")
-                    .setItems(new String[]{"自动 · 仅已验证机型启用 Root 后端", "标准 NFC · 不请求 Root"}, (dialog, which) -> {
+                    .setItems(new String[]{"自动 · 已验证或已允许机型启用 Root 后端", "标准 NFC · 不请求 Root"}, (dialog, which) -> {
                         standardOnly = which == 1;
                         connectionChoice.setText(standardOnly ? "连接方式 · 标准 NFC" : "连接方式 · 自动");
                         compatibilityState.setText(usesRootBackend() ? "Root 后端 · 下次会话生效" : "标准 NFC · 不请求 Root");
@@ -396,6 +396,12 @@ public final class MainActivity extends Activity implements NfcAdapter.ReaderCal
         return DeviceSupport.useRoot(Build.DEVICE, Build.VERSION.SDK_INT, nfc != null, standardOnly);
     }
 
+    private String backendLabel() {
+        if (!usesRootBackend()) return "标准 ISO-DEP（无 Root）";
+        if (DeviceSupport.verifiedRootProfile(Build.DEVICE, Build.VERSION.SDK_INT)) return "已验证 Root 唤醒";
+        return "已允许 Root 唤醒（实验，未完成本机全流程验证）";
+    }
+
     private boolean pendingConfiguration() {
         return new File(getFilesDir(), "polling.snapshot").exists()
                 || new File(getFilesDir(), "polling.snapshot.rf").exists();
@@ -413,7 +419,7 @@ public final class MainActivity extends Activity implements NfcAdapter.ReaderCal
         return "Ink NFC Lab 0.5.0\n品牌：" + Build.MANUFACTURER + "\n型号：" + Build.MODEL
                 + "\n代号：" + Build.DEVICE + "\nAndroid：" + Build.VERSION.RELEASE + " / API " + Build.VERSION.SDK_INT
                 + "\nABI：" + Arrays.toString(Build.SUPPORTED_ABIS) + "\nNFC：" + (nfc != null ? "有" : "无")
-                + "\n当前路径：" + (usesRootBackend() ? "已验证 Root 配置" : "标准 ISO-DEP（无 Root）")
+                + "\n当前路径：" + backendLabel()
                 + "\n\n" + DeviceSupport.summary(Build.DEVICE, Build.VERSION.SDK_INT, nfc != null)
                 + "\n\n标准读卡不等于已能发射 7-bit 7A。未经适配的设备不会自动注入补丁或改射频。";
     }
@@ -858,7 +864,7 @@ public final class MainActivity extends Activity implements NfcAdapter.ReaderCal
         }
         new AlertDialog.Builder(this).setTitle("确认覆盖墨水屏")
                 .setMessage("当前算法：" + AlgorithmCatalog.name(preparedImage.algorithm)
-                        + "\n连接方式：" + (usesRootBackend() ? "已验证 Root 唤醒" : "标准 NFC（不能保证 7A 唤醒）")
+                        + "\n连接方式：" + backendLabel()
                         + "\n将用当前四色点阵覆盖墨水屏，约476个数据包，传完后仍需等待屏幕刷新确认。\n\n请贴在已验证的线圈位置，期间保持不动。原图对照仅用于查看，不会作为发送数据。")
                 .setNegativeButton("取消", null)
                 .setPositiveButton("确认刷图", (dialog, which) -> {
