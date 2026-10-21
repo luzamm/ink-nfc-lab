@@ -97,7 +97,13 @@ adb install -r build/ink-nfc-lab-debug.apk
 
 项目使用原生 Java / Android SDK，无第三方 App 运行时依赖。脚本直接调用官方 aapt2、javac、D8、zipalign 和 apksigner；构建出的 APK 使用本地开发密钥签名。
 
-仓库提供 `.github/workflows/build-apk.yml`。在 GitHub 的 Actions 页面选择 **Build APK** → **Run workflow** 即可构建；完成后在该次运行的 Artifacts 中下载 `ink-nfc-lab-debug-*.zip`。CI 每次使用临时调试密钥，连续覆盖安装前需先卸载旧包。
+仓库提供 `.github/workflows/build-apk.yml`。在 GitHub 的 Actions 页面选择 **Build APK** → **Run workflow** 即可构建；完成后会更新 `ci-latest` 预发布，直接下载 APK（Release 资产，不是 zip）：
+
+```text
+https://github.com/wiwiwei/ink-nfc-lab/releases/download/ci-latest/ink-nfc-lab-debug.apk
+```
+
+CI 每次使用临时调试密钥，连续覆盖安装前需先卸载旧包。
 
 可在电脑直接执行 root 检查，便于区分 App 的 KernelSU 授权与 NFC 接口结果：
 

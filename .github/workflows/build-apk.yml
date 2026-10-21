@@ -7,7 +7,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: build-apk-${{ github.ref }}
@@ -59,10 +59,24 @@ jobs:
       - name: Build APK
         run: bash build.sh
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ink-nfc-lab-debug-${{ github.run_number }}
-          path: build/ink-nfc-lab-debug.apk
-          if-no-files-found: error
-          retention-days: 14
+      # Artifacts are always delivered as a zip by GitHub, so publish the raw
+      # APK as a release asset instead. The download URL stays stable.
+      - name: Publish APK to ci-latest release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          apk="build/ink-nfc-lab-debug.apk"
+          notes="Built from ${GITHUB_SHA} by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if gh release view ci-latest >/dev/null 2>&1; then
+            gh release upload ci-latest "$apk" --clobber
+            gh release edit ci-latest --notes "$notes" --prerelease
+          else
+            gh release create ci-latest "$apk" \
+              --title "CI debug build" \
+              --notes "$notes" \
+              --prerelease \
+              --target "$GITHUB_SHA"
+          fi
+          echo "### APK" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://github.com/${GITHUB_REPOSITORY}/releases/download/ci-latest/ink-nfc-lab-debug.apk" >> "$GITHUB_STEP_SUMMARY"
