@@ -19,6 +19,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,6 +31,14 @@ import java.util.zip.ZipFile;
 public final class RootProbe {
     private static final String FRIDA_VERSION = "17.24.0";
     private static final String COMPAT_READY = "INK_NFC_MIFARE_COMPAT_READY";
+    private static final String[] ST_HAL_CONFIGS = {
+            "/odm/etc/libnfc-hal-st.conf",
+            "/vendor/etc/libnfc-hal-st.conf",
+            "/system/etc/libnfc-hal-st.conf",
+            "/odm/etc/libnfc-nci.conf",
+            "/vendor/etc/libnfc-nci.conf",
+            "/system/etc/libnfc-nci.conf"
+    };
     private static FileChannel lockChannel;
     private static FileLock processLock;
     private final LinkedBlockingQueue<byte[]> replies = new LinkedBlockingQueue<>();
@@ -117,9 +126,10 @@ public final class RootProbe {
         byte[] original = null;
         boolean attempted = false;
         try {
-            String hal = new String(Files.readAllBytes(new File("/odm/etc/libnfc-hal-st.conf").toPath()), StandardCharsets.UTF_8);
-            if (!DeviceSupport.allowedRootProfile(Build.DEVICE, Build.VERSION.SDK_INT) || !hal.contains("st21nfc") || !hal.contains("st54l"))
-                throw new IllegalStateException("当前设备不在 Root 允许列表，或不是匹配的 ST54L HAL 配置");
+            if (!DeviceSupport.allowedRootProfile(Build.DEVICE, Build.VERSION.SDK_INT))
+                throw new IllegalStateException("当前设备不在 Root 允许列表");
+            if (!hasStHalProfile())
+                throw new IllegalStateException("未检测到匹配的 ST54L HAL 配置；已检查 " + String.join(", ", ST_HAL_CONFIGS));
             event("ROOT", "root 辅助进程已启动，设备 " + Build.MODEL);
             if (mode.equals("compat")) {
                 installMifareCompatibility();
@@ -218,6 +228,37 @@ public final class RootProbe {
             callbacks.shutdownNow();
             stopTrace();
         }
+    }
+
+    private boolean hasStHalProfile() throws Exception {
+        String hal = readStHalConfiguration();
+        if (!hal.isEmpty()) {
+            String lower = hal.toLowerCase(Locale.ROOT);
+            if (lower.contains("st21nfc") && lower.contains("st54l")) return true;
+        }
+        // Some vendor images do not ship the ST HAL conf in /odm. Fall back to
+        // the chip property plus the presence of the ST NFC JNI library.
+        String chip = runCommand(5000, "/system/bin/getprop", "ro.vendor.se.chip.model").trim();
+        boolean library = new File("/odm/lib64/libstnfc_nci_jni.so").isFile()
+                || new File("/vendor/lib64/libstnfc_nci_jni.so").isFile()
+                || new File("/system/lib64/libstnfc_nci_jni.so").isFile();
+        return chip.toUpperCase(Locale.ROOT).contains("ST54L") && library;
+    }
+
+    private static String readStHalConfiguration() {
+        StringBuilder result = new StringBuilder();
+        for (String path : ST_HAL_CONFIGS) {
+            File file = new File(path);
+            if (!file.isFile()) continue;
+            try {
+                result.append(path).append('\n')
+                        .append(new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8))
+                        .append('\n');
+            } catch (Exception ignored) {
+                // Try the next candidate; a later one may still be readable.
+            }
+        }
+        return result.toString();
     }
 
     private void installMifareCompatibility() throws Exception {
